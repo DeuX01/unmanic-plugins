@@ -6,3 +6,6 @@
 
 **<span style="color:#56adda">1.0.1</span>**
 - Corrected some text
+
+**<span style="color:#56adda">1.0.2</span>**
+- Added unmanic logo to the embed

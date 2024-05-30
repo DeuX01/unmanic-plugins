@@ -13,13 +13,16 @@ class Settings(PluginSettings):
     def __init__(self, *args, **kwargs):
         super(Settings, self).__init__(*args, **kwargs)
 
-def send_discord_embed(webhook_url, title, description, color):
+def send_discord_embed(webhook_url, title, description, color, thumbnail_url):
     payload = {
         "embeds": [
             {
                 "title": title,
                 "description": description,
                 "color": color,
+                "thumbnail": {
+                    "url": thumbnail_url
+                }
             }
         ]
     }
@@ -56,7 +59,7 @@ def on_postprocessor_task_results(data):
         settings = Settings()
 
     status = data.get('task_processing_success')
-    task_status = "successfully processed" if status else "failed to process"
+    task_status = "Successfully Processed" if status else "Failed to Process"
     source = data.get('source_data')["basename"]
 
     discord_webhook_url = settings.get_setting('discord_webhook_url')
@@ -68,9 +71,10 @@ def on_postprocessor_task_results(data):
     title = "Unmanic Task Status"
     description = f"**File:** `{source}`\n**Status:** `{task_status}`"
     color = 3066993 if status else 15158332  # Green for success, red for failure
+    thumbnail_url = "https://avatars.githubusercontent.com/u/81266068?s=200&v=4"  # Unmanic logo URL
 
     # Send the notification to Discord
-    result = send_discord_embed(discord_webhook_url, title, description, color)
+    result = send_discord_embed(discord_webhook_url, title, description, color, thumbnail_url)
     if not result:
         logger.error("Error sending Discord notification.")
 
