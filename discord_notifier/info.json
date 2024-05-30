@@ -4,9 +4,9 @@
         2
     ],
     "description": "Notify of task success/failure using Discord embeds",
-    "icon": "https://raw.githubusercontent.com/yajrendrag/unmanic-plugins/master/source/task_notifier/icon.png",
-    "id": "task_notifier_discord_embeds",
-    "name": "Task Notifier with Discord Embeds",
+    "icon": "https://raw.githubusercontent.com/DeuX01/unmanic-plugins/main/discord_notifier/icon.png",
+    "id": "discord_notifier",
+    "name": "Discord Notifier",
     "priorities": {
         "on_postprocessor_task_results": 0
     },
