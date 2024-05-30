@@ -1,53 +1,38 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-    Written by:               yajrendrag <yajdude@gmail.com>
-    Date:                     29 September 2023, (11:00 PM)
-
-    Copyright:
-        Unmanic plugin code Copyright (C) 2023 Jay Gardner
-        Apprise module code Copyright (C) by Chris Caron <lead2gold@gmail.com>
-
-        Unmanic Code:
-        This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
-        Public License as published by the Free Software Foundation, version 3.
-
-        This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-        implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-        for more details.
-
-        You should have received a copy of the GNU General Public License along with this program.
-        If not, see <https://www.gnu.org/licenses/>.
-
-        Apprise Module:
-        This Unmanic plugin module uses Apprise (<https://github.com/caronc/apprise/>) which is governed by it's own
-        license terms using BSD 3-Clause "New" or "Revised" License.  The text of this license has accompanied this
-        program.  If for some reason you do not have it, please refer to <https://github.com/caronc/apprise/blob/master/LICENSE/>.
-
-"""
 import logging
-import apprise
-import subprocess
-from apprise.decorators import notify
-
+import requests
 from unmanic.libs.unplugins.settings import PluginSettings
 
 # Configure plugin logger
 logger = logging.getLogger("Unmanic.Plugin.task_notifier")
 
-
 class Settings(PluginSettings):
     settings = {
-        'apprise_config_path':    '/config/apprise_config.txt'
+        'discord_webhook_url': '',  # Add your Discord webhook URL here
     }
 
     def __init__(self, *args, **kwargs):
         super(Settings, self).__init__(*args, **kwargs)
 
-@notify(on="unmanic")
-def my_wrapper(body, title, notify_type, *args, **kwargs):
-    subprocess.check_call(["bash", "/config/unmanic_notifier.sh", body], shell=False)
+def send_discord_embed(webhook_url, title, description, color):
+    payload = {
+        "embeds": [
+            {
+                "title": title,
+                "description": description,
+                "color": color,
+            }
+        ]
+    }
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(webhook_url, json=payload, headers=headers)
+    
+    if response.status_code != 204:
+        logger.error(f"Failed to send Discord message: {response.status_code}, {response.text}")
+        return False
+    return True
 
 def on_postprocessor_task_results(data):
     """
@@ -63,7 +48,6 @@ def on_postprocessor_task_results(data):
 
     :param data:
     :return:
-
     """
     # Configure settings object (maintain compatibility with v1 plugins)
     if data.get('library_id'):
@@ -72,23 +56,22 @@ def on_postprocessor_task_results(data):
         settings = Settings()
 
     status = data.get('task_processing_success')
-    if status:
-        task_status = "successfully processed"
-    else:
-        task_status = "failed to process"
-    apprise_config_path = str(settings.get_setting('apprise_config_path'))
+    task_status = "successfully processed" if status else "failed to process"
     source = data.get('source_data')["basename"]
-    notify = apprise.Apprise()
-    config = apprise.AppriseConfig()
-    result = config.add(apprise_config_path)
-    if not result:
-        logger.error("Error adding apprise configuration: '{}'".format(result))
+
+    discord_webhook_url = settings.get_setting('discord_webhook_url')
+    if not discord_webhook_url:
+        logger.error("Discord webhook URL not configured.")
         return data
-    result = notify.add(config)
+
+    # Create embed message for Discord
+    title = "Unmanic Task Status"
+    description = f"**File:** `{source}`\n**Status:** `{task_status}`"
+    color = 3066993 if status else 15158332  # Green for success, red for failure
+
+    # Send the notification to Discord
+    result = send_discord_embed(discord_webhook_url, title, description, color)
     if not result:
-        logger.error("Error adding configuration data to apprise notification object: '{}'".format(result))
-        return data
-    result = notify.notify(body='Unmanic ' + str(task_status) + str('\n') + str(source), title = 'Unmanic Task Status')
-    if not result:
-        logger.error("Error sending apprise notification: '{}'".format(result))
+        logger.error("Error sending Discord notification.")
+
     return data
